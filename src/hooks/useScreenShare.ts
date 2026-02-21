@@ -4,10 +4,17 @@
 import { useState, useRef, useCallback } from "react";
 import { ScreenStatus } from "@/types/screen.types";
 
+interface Metadata {
+  width?: number;
+  height?: number;
+  displaySurface?: string;
+}
+
 export const useScreenShare = () => {
   const [status, setStatus] = useState<ScreenStatus>("idle");
   const [recording, setRecording] = useState(false);
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+  const [metadata, setMetadata] = useState<Metadata | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -18,18 +25,28 @@ export const useScreenShare = () => {
       setStatus("requesting");
 
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
+        video: { frameRate: { ideal: 30 } },
         audio: false,
       });
 
       streamRef.current = stream;
 
-      stream.getVideoTracks()[0].onended = () => {
+      const track = stream.getVideoTracks()[0];
+      const settings = track.getSettings();
+
+      setMetadata({
+        width: settings.width,
+        height: settings.height,
+        displaySurface: settings.displaySurface,
+      });
+
+      track.onended = () => {
         stopShare();
       };
 
       setStatus("active");
-    } catch (err) {
+    } 
+    catch (err) {
       setStatus("error");
     }
   };
@@ -52,6 +69,10 @@ export const useScreenShare = () => {
       const blob = new Blob(chunksRef.current, {
         type: "video/webm",
       });
+
+      if (recordedUrl) {
+        URL.revokeObjectURL(recordedUrl);
+      }
 
       const url = URL.createObjectURL(blob);
       setRecordedUrl(url);
@@ -81,5 +102,6 @@ export const useScreenShare = () => {
     startRecording,
     stopRecording,
     recordedUrl,
+    metadata,
   };
 };

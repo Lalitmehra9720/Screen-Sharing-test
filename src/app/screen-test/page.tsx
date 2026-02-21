@@ -1,5 +1,7 @@
 
+
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useScreenShare } from "@/hooks/useScreenShare";
@@ -9,7 +11,8 @@ import { ScreenPreview } from "@/components/ScreenPreview";
 export default function ScreenTest() {
   const router = useRouter();
   const [seconds, setSeconds] = useState(0);
-   const {
+
+  const {
     status,
     stream,
     startShare,
@@ -18,31 +21,34 @@ export default function ScreenTest() {
     startRecording,
     stopRecording,
     recordedUrl,
+    metadata,
   } = useScreenShare();
 
-useEffect(() => {
-  let interval: NodeJS.Timeout;
+  // Recording timer
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
 
-  if (recording) {
-    interval = setInterval(() => {
-      setSeconds((prev) => prev + 1);
-    }, 1000);
-  } else {
-    setSeconds(0);
-  }
+    if (recording) {
+      interval = setInterval(() => {
+        setSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setSeconds(0);
+    }
 
-  return () => clearInterval(interval);
-}, [recording]);
-
- 
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [recording]);
 
   const formatTime = (sec: number) => {
-  const mins = Math.floor(sec / 60);
-  const secs = sec % 60;
-  return `${mins.toString().padStart(2, "0")}:${secs
-    .toString()
-    .padStart(2, "0")}`;
-};
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-16">
 
@@ -101,71 +107,54 @@ useEffect(() => {
       )}
 
       {/* Active Sharing */}
-      {/* {status === "active" && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-hidden">
-
-          
-          <div className="max-h-[60vh] overflow-auto">
-            <ScreenPreview stream={stream} />
-          </div>
-
-          
-          <div className="flex items-center justify-between p-4 border-t border-slate-800 bg-slate-950">
-
-            <div className="flex gap-4">
-              {!recording ? (
-                <Button onClick={startRecording}>
-                  Start Recording
-                </Button>
-              ) : (
-                <Button variant="danger" onClick={stopRecording}>
-                  Stop Recording
-                </Button>
-              )}
-
-              <Button variant="secondary" onClick={stopShare}>
-                Stop Sharing
-              </Button>
-            </div>
-
-          </div>
-        </div>
-      )} */}
       {status === "active" && (
-  <div className="relative bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-hidden">
+        <div className="relative bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-hidden">
 
-    {/* Floating Control Bar */}
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-950/90 backdrop-blur-md px-6 py-3 rounded-full flex items-center gap-6 border border-slate-700 shadow-lg">
+          {/* Floating Controls */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-950/90 backdrop-blur-md px-6 py-3 rounded-full flex items-center gap-6 border border-slate-700 shadow-lg">
 
-      {/* Recording Indicator */}
-      {recording && (
-        <div className="flex items-center gap-2 text-red-500 font-medium">
-          <span className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></span>
-          REC {formatTime(seconds)}
+            {recording && (
+              <div className="flex items-center gap-2 text-red-500 font-medium">
+                <span className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></span>
+                REC {formatTime(seconds)}
+              </div>
+            )}
+
+            {!recording ? (
+              <Button onClick={startRecording}>
+                Start Recording
+              </Button>
+            ) : (
+              <Button variant="danger" onClick={stopRecording}>
+                Stop Recording
+              </Button>
+            )}
+
+            <Button variant="secondary" onClick={stopShare}>
+              Stop Sharing
+            </Button>
+          </div>
+
+          {/* Preview */}
+          <div className="relative max-h-[70vh] overflow-auto">
+            <ScreenPreview stream={stream} />
+
+            {/* Resolution + Display Type Overlay */}
+            {metadata && (
+              <div className="absolute bottom-4 left-4 bg-slate-950/80 backdrop-blur px-4 py-2 rounded-lg text-xs text-slate-300 border border-slate-700">
+                <div>
+                  Resolution: {metadata.width ?? "-"} × {metadata.height ?? "-"}
+                </div>
+                {metadata.displaySurface && (
+                  <div>
+                    Display: {metadata.displaySurface}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
-
-      {!recording ? (
-        <Button onClick={startRecording}>
-          Start Recording
-        </Button>
-      ) : (
-        <Button variant="danger" onClick={stopRecording}>
-          Stop Recording
-        </Button>
-      )}
-
-      <Button variant="secondary" onClick={stopShare}>
-        Stop Sharing
-      </Button>
-    </div>
-
-    {/* Preview */}
-    <div className="max-h-[70vh] overflow-auto">
-      <ScreenPreview stream={stream} />
-    </div>
-  </div>
-)}
 
       {/* Recorded Preview */}
       {recordedUrl && (
@@ -191,36 +180,22 @@ useEffect(() => {
       )}
 
       {/* Stopped State */}
-      {/* {status === "stopped" && (
-        <div className="text-center mt-6 flex justify-center gap-4">
-          <Button onClick={startShare}>
-            Retry
-          </Button>
-
-          <Button
-            variant="secondary"
-            onClick={() => router.push("/")}
-          >
-            Back to Home
-          </Button>
-        </div>
-      )} */}
       {status === "stopped" && (
-  <div className="text-center mt-10 space-y-4">
-    <Button onClick={startShare}>
-      Start Again
-    </Button>
+        <div className="text-center mt-10 space-y-4">
+          <Button onClick={startShare}>
+            Start Again
+          </Button>
 
-    <div>
-      <Button
-        variant="secondary"
-        onClick={() => router.push("/")}
-      >
-        Back to Home
-      </Button>
-    </div>
-  </div>
-)}
+          <div>
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/")}
+            >
+              Back to Home
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
